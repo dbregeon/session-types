@@ -78,7 +78,7 @@ pub use Branch::*;
 /// A session typed channel. `P` is the protocol and `E` is the environment,
 /// containing potential recursion targets
 #[must_use]
-pub struct Chan<E, P>(Sender<*mut u8>, Receiver<*mut u8>, PhantomData<(E, P)>);
+pub struct Chan<E, P>(pub Sender<*mut u8>, pub Receiver<*mut u8>, pub PhantomData<(E, P)>);
 
 unsafe impl<E: marker::Send, P: marker::Send> marker::Send for Chan<E, P> {}
 
@@ -488,6 +488,17 @@ pub fn session_channel<P: HasDual>() -> (Chan<(), P>, Chan<(), P::Dual>) {
     let c2 = Chan(tx2, rx1, PhantomData);
 
     (c1, c2)
+}
+
+// Returns a Sender and a Receiver to communicate with the Channel.
+// The Sender and Receiver can be used to connect the Channel to, for instance, a socket.
+pub fn build_channel<P: HasDual>() -> (Sender<*mut u8>, Receiver<*mut u8>, Chan<(), P>) {
+    let (tx1, rx1) = unbounded();
+    let (tx2, rx2) = unbounded();
+
+    let c1 = Chan(tx1, rx2, PhantomData);
+
+    (tx2, rx1, c1)
 }
 
 /// Connect two functions using a session typed channel.
